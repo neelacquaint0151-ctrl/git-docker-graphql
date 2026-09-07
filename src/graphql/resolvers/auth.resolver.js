@@ -46,7 +46,18 @@ export const authResolver = {
         };
       }
 
+      // Delete OTP to prevent reuse
       await redis.del(redisKey);
+
+      // PUBLISH EVENT TO REDIS STREAM: Decoupled Inter-Service Messaging
+      await redis.xadd(
+        'auth-events',
+        '*',
+        'event', 'USER_VERIFIED',
+        'phone', phone,
+        'timestamp', Date.now().toString()
+      );
+      console.log(`📡 [Redis Stream] Published USER_VERIFIED event for phone: ${phone}`);
 
       return {
         success: true,
