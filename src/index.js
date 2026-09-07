@@ -4,61 +4,28 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
-import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-import { makeExecutableSchema } from '@graphql-tools/schema';
-import { WebSocketServer } from 'ws';
-import { useServer } from 'graphql-ws/use/ws';
-
-import { typeDefs } from './graphql/typeDefs/index.js';
-import { resolvers } from './graphql/resolvers/index.js';
-import { createPostLoader } from './dataloaders/post.loader.js';
+import { ApolloGateway, IntrospectAndCompose } from '@apollo/gateway';
 
 dotenv.config();
 
 const app = express();
 const httpServer = http.createServer(app);
 
-const schema = makeExecutableSchema({ typeDefs, resolvers });
-
-// Setup WebSocket Server for Subscriptions
-const wsServer = new WebSocketServer({
-  server: httpServer,
-  path: '/graphql',
+// Gateway composes subgraphs into one schema
+const gateway = new ApolloGateway({
+    supergraphSdl: new IntrospectAndCompose({
+        subgraphs: [
+            { name: 'auth', url: process.env.AUTH_SERVICE_URL || 'http://localhost:4001/graphql' },
+            { name: 'user', url: process.env.USER_SERVICE_URL || 'http://localhost:4002/graphql' },
+        ],
+        pollIntervalInMs: 10000,
+    }),
 });
 
-const serverCleanup = useServer({ schema }, wsServer);
-
-const server = new ApolloServer({
-  schema,
-  plugins: [
-    ApolloServerPluginDrainHttpServer({ httpServer }),
-    {
-      async serverWillStart() {
-        return {
-          async drainServer() {
-            await serverCleanup.dispose();
-          },
-        };
-      },
-    },
-  ],
-});
-
+const server = new ApolloServer({ gateway });
 await server.start();
 
-app.use(
-  '/graphql',
-  cors(),
-  express.json(),
-  expressMiddleware(server, {
-    context: async () => ({
-      postLoader: createPostLoader(),
-    }),
-  })
-);
+app.use('/graphql', cors(), express.json(), expressMiddleware(server));
 
 const PORT = process.env.PORT || 4000;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 GraphQL Server running at http://localhost:${PORT}/graphql`);
-  console.log(`⚡ WebSocket Server: ws://localhost:${PORT}/graphql`);
-});
+httpServer.listen(PORT, () => console.log(`🌐 Apollo Gateway running at http://localhost:${PORT}/graphql`));

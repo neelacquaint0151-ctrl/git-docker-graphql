@@ -1,20 +1,39 @@
 # version: '3.8'
 
 services:
-  app:
+  gateway:
     build: .
+    command: npm run start
     ports:
       - "4000:4000"
     environment:
       - PORT=4000
+      - AUTH_SERVICE_URL=http://auth-service:4001/graphql
+      - USER_SERVICE_URL=http://user-service:4002/graphql
+    depends_on:
+      - auth-service
+      - user-service
+
+  auth-service:
+    build: .
+    command: npm run start:auth
+    ports:
+      - "4001:4001"
+    environment:
+      - AUTH_SERVICE_PORT=4001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - HTTPSMS_API_KEY=uk_H0P1cad9wE3gBEfBMwD-QH_X6MfHz76FTtyMfQXBamJMoxK822OsvPW3HJ_1Td9R
-      - HTTPSMS_FROM_NUMBER=+13322483264
+
+  user-service:
+    build: .
+    command: npm run start:user
+    ports:
+      - "4002:4002"
+    environment:
+      - USER_SERVICE_PORT=4002
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mydb?schema=public
-    volumes:
-      - .:/app
-      - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy

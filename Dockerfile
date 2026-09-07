@@ -5,7 +5,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
 RUN npx prisma generate
-RUN npm install
+# RUN npm install
 COPY . .
 
 # Stage 2: Production Lightweight Image
