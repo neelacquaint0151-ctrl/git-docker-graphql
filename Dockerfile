@@ -1,6 +1,7 @@
 # Stage 1: Build Dependencies & Generate Prisma Client
 FROM node:20-alpine AS builder
 WORKDIR /app
+
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
@@ -25,5 +26,5 @@ COPY --from=builder /app/prisma ./prisma
 # Security: Switch from root user to unprivileged 'node' user
 USER node
 
-EXPOSE 4000
+EXPOSE 4000 4001 4002
 CMD ["npm", "start"]
