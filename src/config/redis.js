@@ -10,14 +10,22 @@ const redisPort = process.env.REDIS_PORT || 6379;
 export const redisOptions = {
   host: redisHost,
   port: Number(redisPort),
-  retryStrategy: (times) => Math.min(times * 50, 2000),
+  retryStrategy: (times) => Math.min(times * 100, 3000),
+  maxRetriesPerRequest: null,
+  connectTimeout: 10000,
 };
 
 export const redis = new Redis(redisOptions);
 
+const publisher = new Redis(redisOptions);
+const subscriber = new Redis(redisOptions);
+
+publisher.on('error', (err) => console.error('[Redis Publisher Error]', err.message));
+subscriber.on('error', (err) => console.error('[Redis Subscriber Error]', err.message));
+
 export const pubsub = new RedisPubSub({
-  publisher: new Redis(redisOptions),
-  subscriber: new Redis(redisOptions),
+  publisher,
+  subscriber,
 });
 
 redis.on('connect', () => console.log('⚡ Connected to Redis successfully!'));

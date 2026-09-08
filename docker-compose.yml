@@ -10,9 +10,15 @@ services:
       - PORT=4000
       - AUTH_SERVICE_URL=http://auth-service:4001/graphql
       - USER_SERVICE_URL=http://user-service:4002/graphql
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
-      - auth-service
-      - user-service
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   auth-service:
     build: .
@@ -23,6 +29,9 @@ services:
       - AUTH_SERVICE_PORT=4001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
 
   user-service:
     build: .
