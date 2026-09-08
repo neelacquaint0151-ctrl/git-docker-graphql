@@ -10,6 +10,7 @@ const redisPort = process.env.REDIS_PORT || 6379;
 export const redisOptions = {
   host: redisHost,
   port: Number(redisPort),
+  family: 4,
   retryStrategy: (times) => Math.min(times * 100, 3000),
   maxRetriesPerRequest: null,
   connectTimeout: 10000,
