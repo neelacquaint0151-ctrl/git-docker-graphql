@@ -1,13 +1,9 @@
-# version: '3.8'
-
-# YAML Anchor: Shared config for all Node.js services
 x-common-service: &common-service
   build:
     context: .
     dockerfile: Dockerfile
   restart: unless-stopped
-  networks:
-    - internal_microservice_network
+  network_mode: "host"
   logging:
     driver: "json-file"
     options:
@@ -18,20 +14,14 @@ services:
   gateway:
     <<: *common-service
     command: npm run start
-    ports:
-      - "4000:4000" # Only the Gateway is exposed to the outside world
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - AUTH_SERVICE_URL=http://auth-service:4001/graphql
-      - USER_SERVICE_URL=http://user-service:4002/graphql
-      - REDIS_HOST=redis
+      - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
-    depends_on:
-      auth-service:
-        condition: service_started
-      user-service:
-        condition: service_started
+      - AUTH_SERVICE_URL=http://127.0.0.1:4001/graphql
+      - USER_SERVICE_URL=http://127.0.0.1:4002/graphql
+      - METADATA_SERVER_DETECTION=none
 
   auth-service:
     <<: *common-service
@@ -39,12 +29,10 @@ services:
     environment:
       - NODE_ENV=production
       - AUTH_SERVICE_PORT=4001
-      - REDIS_HOST=redis
+      - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
-      - HTTPSMS_API_KEY=${HTTPSMS_API_KEY} # Securely injected from host machine
-    depends_on:
-      redis:
-        condition: service_healthy
+      - HTTPSMS_API_KEY=${HTTPSMS_API_KEY}
+      - METADATA_SERVER_DETECTION=none
 
   user-service:
     <<: *common-service
@@ -52,50 +40,27 @@ services:
     environment:
       - NODE_ENV=production
       - USER_SERVICE_PORT=4002
-      - REDIS_HOST=redis
+      - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mydb?schema=public
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/mydb?schema=public
+      - METADATA_SERVER_DETECTION=none
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes # Enable data persistence
-    networks:
-      - internal_microservice_network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    volumes:
-      - redis_data:/data
+    network_mode: "host"
+    command: redis-server --appendonly yes --protected-mode no
 
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
-    networks:
-      - internal_microservice_network
+    network_mode: "host"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mydb
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mydb"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-networks:
-  internal_microservice_network:
-    driver: bridge
 
 volumes:
   postgres_data:
-  redis_data:

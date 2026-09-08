@@ -21,6 +21,9 @@ export const redis = new Redis(redisOptions);
 const publisher = new Redis(redisOptions);
 const subscriber = new Redis(redisOptions);
 
+redis.on('connect', () => console.log('⚡ Connected to Redis successfully!'));
+
+redis.on('error', (err) => console.error('Redis error:', err.message));
 publisher.on('error', (err) => console.error('[Redis Publisher Error]', err.message));
 subscriber.on('error', (err) => console.error('[Redis Subscriber Error]', err.message));
 
