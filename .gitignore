@@ -3,5 +3,5 @@ node_modules/
 .agents/
 .windsurf/
 .claude/
-package-lock.json
+# package-lock.json
 skills-lock.json
